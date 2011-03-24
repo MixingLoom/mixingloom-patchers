@@ -33,14 +33,13 @@ public class RevealPrivatesPatcher extends AbstractPatcher {
   }
 
   override public function apply( invocationType:InvocationType, swfContext:SwfContext ):void {
-	 applier.startPatching( this );
+    applier.startPatching( this );
 
-	  if ( invocationType.type != InvocationType.FRAME2 ) {
-		  applier.completePatching( this );
+    if ( invocationType.type != InvocationType.FRAME2 ) {
+      applier.completePatching( this );
 
-		 return;
-	 }
-
+      return;
+    }
 
     run(swfContext.swfTags);
 
@@ -49,15 +48,10 @@ public class RevealPrivatesPatcher extends AbstractPatcher {
 
   public function run(swfTags:Vector.<SwfTag>):void
   {
-    trace('RevealPrivatesPatcher run()');
-
     for each (var swfTag:SwfTag in swfTags)
     {
-      //trace(swfTag.name, classTagName);
       if (swfTag.name == classTagName)
       {
-        trace('found ' + classTagName);
-
         // skip the flags
         swfTag.tagBody.position = 4;
 
@@ -83,13 +77,9 @@ public class RevealPrivatesPatcher extends AbstractPatcher {
             {
               mb.methodSignature.as3commonsBytecodeName.nameSpace = LNamespace.PUBLIC;
               mb.methodSignature.scopeName = mb.methodSignature.as3commonsBytecodeName.nameSpace.kind.description;
-              trace('method updated');
             }
           }
         }
-
-        // check the properties
-        //trace(origAbcFile.instanceInfo);
 
         for each (var ci:InstanceInfo in origAbcFile.instanceInfo)
         {
@@ -98,7 +88,6 @@ public class RevealPrivatesPatcher extends AbstractPatcher {
             if (t.traitMultiname.name == propertyOrMethodName)
             {
               t.traitMultiname.nameSpace = LNamespace.PUBLIC;
-              trace('trait update');
             }
           }
         }
@@ -122,8 +111,6 @@ public class RevealPrivatesPatcher extends AbstractPatcher {
         // method body
         swfTag.tagBody.writeBytes(abcByteArray);
 
-        trace('tag length = ' + swfTag.tagBody.length);
-
         swfTag.recordHeader = new ByteArray();
         swfTag.recordHeader.endian = Endian.LITTLE_ENDIAN;
         swfTag.recordHeader.writeByte(0xbf);
@@ -134,7 +121,6 @@ public class RevealPrivatesPatcher extends AbstractPatcher {
       }
     }
   }
-
 
 }
 }

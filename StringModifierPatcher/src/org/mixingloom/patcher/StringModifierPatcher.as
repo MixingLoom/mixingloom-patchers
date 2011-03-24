@@ -44,13 +44,10 @@ public class StringModifierPatcher extends AbstractPatcher {
       return;
     }
 
-    trace('StringModifierPatcher');
     for each (var swfTag:SwfTag in swfContext.swfTags)
     {
       if (swfTag.name == classTagName)
       {
-        trace('found ' + classTagName);
-
         var searchByteArray:ByteArray = new ByteArray();
         searchByteArray.writeUTFBytes(originalString);
         searchByteArray.position = 0;
@@ -63,7 +60,7 @@ public class StringModifierPatcher extends AbstractPatcher {
         for (var i:uint = 0; i < (swfTag.tagBody.length - searchByteArray.length - 1); i++)
         {
           swfTag.tagBody.position = i;
-          
+
           var testByteArray:ByteArray = new ByteArray();
           swfTag.tagBody.readBytes(testByteArray, 0, searchByteArray.length);
 
@@ -87,11 +84,8 @@ public class StringModifierPatcher extends AbstractPatcher {
           }
           else
           {
-            trace('found!!! ' + i);
-
             modifiedTagBody.writeUTFBytes(replacementString);
             i += searchByteArray.length - 1;
-            trace(i);
           }
 
         }
@@ -99,15 +93,7 @@ public class StringModifierPatcher extends AbstractPatcher {
         // write the last searchByteArray.length bytes to the end of the modifiedTagBody
         modifiedTagBody.writeBytes(swfTag.tagBody, (swfTag.tagBody.length - searchByteArray.length - 1));
 
-        swfTag.tagBody.position = 0;
-        trace(HexDump.dumpHex(swfTag.tagBody));
-
-        modifiedTagBody.position = 0;
-        trace(HexDump.dumpHex(modifiedTagBody));
-
         swfTag.tagBody = modifiedTagBody;
-
-        trace('tag length = ' + swfTag.tagBody.length);
 
         swfTag.recordHeader = new ByteArray();
         swfTag.recordHeader.endian = Endian.LITTLE_ENDIAN;
