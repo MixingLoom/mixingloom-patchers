@@ -36,10 +36,9 @@ public class StringModifierPatcher extends AbstractPatcher {
   }
 
   override public function apply( invocationType:InvocationType, swfContext:SwfContext ):void {
-    applier.startPatching( this );
 
     if ( invocationType.type != InvocationType.FRAME2 ) {
-      applier.completePatching( this );
+      invokeCallBack();
 
       return;
     }
@@ -105,7 +104,7 @@ public class StringModifierPatcher extends AbstractPatcher {
       }
     }
 
-    applier.completePatching( this );
+    invokeCallBack();
   }
 
 }

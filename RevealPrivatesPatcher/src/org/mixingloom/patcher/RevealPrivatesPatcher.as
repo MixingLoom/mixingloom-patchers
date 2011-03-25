@@ -33,17 +33,15 @@ public class RevealPrivatesPatcher extends AbstractPatcher {
   }
 
   override public function apply( invocationType:InvocationType, swfContext:SwfContext ):void {
-    applier.startPatching( this );
-
     if ( invocationType.type != InvocationType.FRAME2 ) {
-      applier.completePatching( this );
+      invokeCallBack();
 
       return;
     }
 
     run(swfContext.swfTags);
 
-    applier.completePatching( this );
+    invokeCallBack();
   }
 
   public function run(swfTags:Vector.<SwfTag>):void
