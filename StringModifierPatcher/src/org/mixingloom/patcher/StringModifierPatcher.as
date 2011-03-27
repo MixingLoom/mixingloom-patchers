@@ -24,13 +24,15 @@ import org.mixingloom.utils.HexDump;
 
 public class StringModifierPatcher extends AbstractPatcher {
 
-  public var classTagName:String;
+  public var tagName:String;
+  public var className:String;
   public var originalString:String;
   public var replacementString:String;
 
-  public function StringModifierPatcher(classTagName:String, originalString:String, replacementString:String)
+  public function StringModifierPatcher(tagName:String, className:String, originalString:String, replacementString:String)
   {
-    this.classTagName = classTagName;
+    this.tagName = tagName;
+    this.className = className;
     this.originalString = originalString;
     this.replacementString = replacementString;
   }
@@ -45,7 +47,7 @@ public class StringModifierPatcher extends AbstractPatcher {
 
     for each (var swfTag:SwfTag in swfContext.swfTags)
     {
-      if (swfTag.name == classTagName)
+      if ((swfTag.name == tagName) || (tagName == null))
       {
         var searchByteArray:ByteArray = new ByteArray();
         searchByteArray.writeUTFBytes(originalString);
