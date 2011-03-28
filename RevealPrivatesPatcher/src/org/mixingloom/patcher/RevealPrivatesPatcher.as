@@ -6,15 +6,14 @@
  */
 package org.mixingloom.patcher
 {
-import flash.sampler._getInvocationCount;
 import flash.utils.ByteArray;
 import flash.utils.Endian;
 
 import org.as3commons.bytecode.abc.AbcFile;
-import org.as3commons.bytecode.abc.ClassInfo;
 import org.as3commons.bytecode.abc.InstanceInfo;
 import org.as3commons.bytecode.abc.LNamespace;
 import org.as3commons.bytecode.abc.MethodBody;
+import org.as3commons.bytecode.abc.MethodInfo;
 import org.as3commons.bytecode.abc.TraitInfo;
 import org.as3commons.bytecode.io.AbcDeserializer;
 import org.as3commons.bytecode.io.AbcSerializer;
@@ -45,6 +44,8 @@ public class RevealPrivatesPatcher extends AbstractPatcher {
     {
       if (((swfTag.name == tagName) || (tagName == null)) && (swfTag.type == 82))
       {
+        var needsModification:Boolean = false;
+
         // skip the flags
         swfTag.tagBody.position = 4;
 
@@ -64,7 +65,7 @@ public class RevealPrivatesPatcher extends AbstractPatcher {
         swfTag.tagBody.position = 0;
 
         var abcDeserializer:AbcDeserializer = new AbcDeserializer(swfTag.tagBody);
-        abcDeserializer.methodBodyExtractionMethod = MethodBodyExtractionKind.SKIP;
+        //abcDeserializer.methodBodyExtractionMethod = MethodBodyExtractionKind.BYTEARRAY;
 
         var origAbcFile:AbcFile = abcDeserializer.deserialize(abcStartLocation);
 
@@ -72,61 +73,60 @@ public class RevealPrivatesPatcher extends AbstractPatcher {
         {
           if (ii.classMultiname.fullName == className)
           {
-            trace('FOUND ' + className);
-            // check the methods
-            for each (var mb:MethodBody in ii.methodTraits.methodBodies)
-            {
-              trace(mb.methodSignature);
-              if (!(mb.methodSignature.as3commonsBytecodeName is String))
-              {
-                if (mb.methodSignature.as3commonsBytecodeName.name == propertyOrMethodName)
-                {
-                  trace('method ' + propertyOrMethodName);
-                  mb.methodSignature.as3commonsBytecodeName.nameSpace = LNamespace.PUBLIC;
-                  mb.methodSignature.scopeName = mb.methodSignature.as3commonsBytecodeName.nameSpace.kind.description;
-                }
-              }
-            }
+            //trace('FOUND ' + className);
 
             for each (var t:TraitInfo in ii.traits)
             {
               if (t.traitMultiname.name == propertyOrMethodName)
               {
-                trace('trait ' + propertyOrMethodName);
+                //trace('trait ' + propertyOrMethodName);
                 t.traitMultiname.nameSpace = LNamespace.PUBLIC;
+
+                needsModification = true;
               }
             }
 
-            trace('modified ' + propertyOrMethodName);
-
-            var abcSerializer:AbcSerializer = new AbcSerializer();
-            var abcByteArray:ByteArray = abcSerializer.serializeAbcFile(origAbcFile);
-
-            swfTag.tagBody = new ByteArray();
-            swfTag.tagBody.endian = Endian.LITTLE_ENDIAN;
-
-            // 4 byte flags
-            swfTag.tagBody.writeByte(0x01);
-            swfTag.tagBody.writeByte(0);
-            swfTag.tagBody.writeByte(0);
-            swfTag.tagBody.writeByte(0);
-
-            // tag name
-            swfTag.tagBody.writeUTFBytes(tagName);
-            swfTag.tagBody.writeByte(0);
-
-            // method body
-            swfTag.tagBody.writeBytes(abcByteArray);
-
-            swfTag.recordHeader = new ByteArray();
-            swfTag.recordHeader.endian = Endian.LITTLE_ENDIAN;
-            swfTag.recordHeader.writeByte(0xbf);
-            swfTag.recordHeader.writeByte(0x14);
-            swfTag.recordHeader.writeInt(swfTag.tagBody.length);
-
-            swfTag.modified = true;
+            //trace('modified ' + propertyOrMethodName);
           }
         }
+
+        // if we didn't modify anything, then just continue
+        if (!needsModification)
+        {
+          continue;
+        }
+
+        var abcSerializer:AbcSerializer = new AbcSerializer();
+        var abcByteArray:ByteArray = abcSerializer.serializeAbcFile(origAbcFile);
+
+        swfTag.tagBody = new ByteArray();
+        swfTag.tagBody.endian = Endian.LITTLE_ENDIAN;
+
+        // 4 byte flags
+        swfTag.tagBody.writeByte(0x01);
+        swfTag.tagBody.writeByte(0);
+        swfTag.tagBody.writeByte(0);
+        swfTag.tagBody.writeByte(0);
+
+        // tag name
+        if (swfTag.name != null)
+        {
+          swfTag.tagBody.writeUTFBytes(swfTag.name);
+        }
+        swfTag.tagBody.writeByte(0);
+
+        // method body
+        swfTag.tagBody.writeBytes(abcByteArray);
+
+        swfTag.recordHeader = new ByteArray();
+        swfTag.recordHeader.endian = Endian.LITTLE_ENDIAN;
+        swfTag.recordHeader.writeByte(0xbf);
+        swfTag.recordHeader.writeByte(0x14);
+        swfTag.recordHeader.writeInt(swfTag.tagBody.length);
+
+        swfTag.modified = true;
+
+        //trace(HexDump.dumpHex(swfTag.tagBody));
       }
     }
 
