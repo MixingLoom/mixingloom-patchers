@@ -68,15 +68,15 @@ public class RevealPrivatesPatcher extends AbstractPatcher {
 
         var origAbcFile:AbcFile = abcDeserializer.deserialize(abcStartLocation);
 
-        //trace(origAbcFile.classInfo);
-        for each (var ci:ClassInfo in origAbcFile.classInfo)
+        for each (var ii:InstanceInfo in origAbcFile.instanceInfo)
         {
-          if (ci.classMultiname.fullName == className)
+          if (ii.classMultiname.fullName == className)
           {
             trace('FOUND ' + className);
             // check the methods
-            for each (var mb:MethodBody in ci.methodInfo.methodBodies)
+            for each (var mb:MethodBody in ii.methodTraits.methodBodies)
             {
+              trace(mb.methodSignature);
               if (!(mb.methodSignature.as3commonsBytecodeName is String))
               {
                 if (mb.methodSignature.as3commonsBytecodeName.name == propertyOrMethodName)
@@ -88,7 +88,7 @@ public class RevealPrivatesPatcher extends AbstractPatcher {
               }
             }
 
-            for each (var t:TraitInfo in ci.traits)
+            for each (var t:TraitInfo in ii.traits)
             {
               if (t.traitMultiname.name == propertyOrMethodName)
               {
@@ -99,8 +99,8 @@ public class RevealPrivatesPatcher extends AbstractPatcher {
 
             trace('modified ' + propertyOrMethodName);
 
-            /*var abcSerializer:AbcSerializer = new AbcSerializer();
-            var abcByteArray:ByteArray = abcSerializer.serializeAbcFile(ci);
+            var abcSerializer:AbcSerializer = new AbcSerializer();
+            var abcByteArray:ByteArray = abcSerializer.serializeAbcFile(origAbcFile);
 
             swfTag.tagBody = new ByteArray();
             swfTag.tagBody.endian = Endian.LITTLE_ENDIAN;
@@ -124,7 +124,7 @@ public class RevealPrivatesPatcher extends AbstractPatcher {
             swfTag.recordHeader.writeByte(0x14);
             swfTag.recordHeader.writeInt(swfTag.tagBody.length);
 
-            swfTag.modified = true;*/
+            swfTag.modified = true;
           }
         }
       }
