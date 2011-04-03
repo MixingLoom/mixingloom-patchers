@@ -40,6 +40,11 @@ public class RevealPrivatesPatcher extends AbstractPatcher {
 
   override public function apply( invocationType:InvocationType, swfContext:SwfContext ):void {
 
+	if ( ( invocationType.type == InvocationType.RSL ) && ( invocationType.url != "spark_4.0.0.0.swf" ) ) {
+		invokeCallBack();
+		return;
+	}
+
     for each (var swfTag:SwfTag in swfContext.swfTags)
     {
       if (((swfTag.name == tagName) || (tagName == null)) && (swfTag.type == 82))
