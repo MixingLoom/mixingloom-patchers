@@ -26,6 +26,7 @@ import org.as3commons.bytecode.io.MethodBodyExtractionKind;
 import org.mixingloom.SwfContext;
 import org.mixingloom.SwfTag;
 import org.mixingloom.invocation.InvocationType;
+import org.mixingloom.utils.ByteArrayUtils;
 import org.mixingloom.utils.HexDump;
 
 public class RevealPrivatesPatcher extends AbstractPatcher {
@@ -78,17 +79,33 @@ public class RevealPrivatesPatcher extends AbstractPatcher {
                 abcDeserializer.deserializeConstantPool(cp);
                 var endOfConstPoolPosition:uint = swfTag.tagBody.position;
 
+                trace(startOfConstPoolPosition + " to " + endOfConstPoolPosition);
 
                 var multiname:QualifiedName = cp.multinamePool[cp.getMultinamePositionByName(propertyOrMethodName)];
 
                 if (multiname != null) {
                     trace('found ' + propertyOrMethodName);
-                    multiname.nameSpace = LNamespace.PUBLIC;
-                    needsModification = true;
-                }
+                    trace(multiname);
 
-                for each (var qn:Object in cp.multinamePool) {
-                    //trace(qn);
+                    // create a bytearray for the original serialized multiname
+                    var mnAbcSerializer:AbcSerializer = new AbcSerializer();
+                    var nCP:IConstantPool = new ConstantPool();
+                    nCP.addMultiname(multiname);
+                    //nCP.addItemToPool(ConstantKind.)
+                    var nCPBA:ByteArray = new ByteArray();
+                    nCPBA.endian = Endian.LITTLE_ENDIAN;
+                    mnAbcSerializer.serializeConstantPool(nCP, nCPBA);
+
+                    trace(HexDump.dumpHex(nCPBA));
+
+                    trace('location in CP ' + ByteArrayUtils.indexOf(swfTag.tagBody, nCPBA));
+
+                    // create a replacement bytearray from the new serialized multiname
+
+                    // replace the original section with the new section
+
+                    //multiname.nameSpace = LNamespace.PUBLIC;
+                    needsModification = true;
                 }
 
 
@@ -97,7 +114,7 @@ public class RevealPrivatesPatcher extends AbstractPatcher {
                     continue;
                 }
 
-                trace('startOfConstPoolPosition ' + startOfConstPoolPosition);
+                /*trace('startOfConstPoolPosition ' + startOfConstPoolPosition);
                 trace('endOfConstPoolPosition ' + endOfConstPoolPosition);
 
                 swfTag.tagBody.position = 0;
@@ -145,7 +162,7 @@ public class RevealPrivatesPatcher extends AbstractPatcher {
                     }
                 }
 
-                swfTag.modified = true;
+                swfTag.modified = true;*/
             }
         }
 
