@@ -20,19 +20,18 @@ import org.as3commons.bytecode.io.AbcSerializer;
 import org.mixingloom.SwfContext;
 import org.mixingloom.SwfTag;
 import org.mixingloom.invocation.InvocationType;
+import org.mixingloom.utils.ByteArrayUtils;
 import org.mixingloom.utils.HexDump;
 
 public class StringModifierPatcher extends AbstractPatcher {
 
   public var tagName:String;
-  public var className:String;
   public var originalString:String;
   public var replacementString:String;
 
-  public function StringModifierPatcher(tagName:String, className:String, originalString:String, replacementString:String)
+  public function StringModifierPatcher(tagName:String, originalString:String, replacementString:String)
   {
     this.tagName = tagName;
-    this.className = className;
     this.originalString = originalString;
     this.replacementString = replacementString;
   }
@@ -53,48 +52,11 @@ public class StringModifierPatcher extends AbstractPatcher {
         searchByteArray.writeUTFBytes(originalString);
         searchByteArray.position = 0;
 
-        var modifiedTagBody:ByteArray = new ByteArray();
-        modifiedTagBody.endian = Endian.LITTLE_ENDIAN;
+        var replacementByteArray:ByteArray = new ByteArray();
+        replacementByteArray.writeUTFBytes(replacementString);
+        replacementByteArray.position = 0;
 
-        swfTag.tagBody.position = 0;
-
-        for (var i:uint = 0; i < (swfTag.tagBody.length - searchByteArray.length - 1); i++)
-        {
-          swfTag.tagBody.position = i;
-
-          var testByteArray:ByteArray = new ByteArray();
-          swfTag.tagBody.readBytes(testByteArray, 0, searchByteArray.length);
-
-          var stringNotFound:Boolean = false;
-
-          searchByteArray.position = 0;
-          testByteArray.position = 0;
-          for (var j:uint = 0; j < searchByteArray.length; j++)
-          {
-            if (searchByteArray.readByte() != testByteArray.readByte())
-            {
-              stringNotFound = true;
-              break;
-            }
-          }
-
-          if (stringNotFound)
-          {
-            swfTag.tagBody.position = i;
-            modifiedTagBody.writeByte(swfTag.tagBody.readByte());
-          }
-          else
-          {
-            modifiedTagBody.writeUTFBytes(replacementString);
-            i += searchByteArray.length - 1;
-          }
-
-        }
-
-        // write the last searchByteArray.length bytes to the end of the modifiedTagBody
-        modifiedTagBody.writeBytes(swfTag.tagBody, (swfTag.tagBody.length - searchByteArray.length - 1));
-
-        swfTag.tagBody = modifiedTagBody;
+        swfTag.tagBody = ByteArrayUtils.findAndReplace(swfTag.tagBody, searchByteArray, replacementByteArray);
 
         swfTag.recordHeader = new ByteArray();
         swfTag.recordHeader.endian = Endian.LITTLE_ENDIAN;
