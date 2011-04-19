@@ -17,6 +17,8 @@ import org.as3commons.bytecode.abc.MethodBody;
 import org.as3commons.bytecode.abc.TraitInfo;
 import org.as3commons.bytecode.io.AbcDeserializer;
 import org.as3commons.bytecode.io.AbcSerializer;
+import org.as3commons.bytecode.util.AbcSpec;
+import org.as3commons.bytecode.util.SWFSpec;
 import org.mixingloom.SwfContext;
 import org.mixingloom.SwfTag;
 import org.mixingloom.invocation.InvocationType;
@@ -37,26 +39,17 @@ public class StringModifierPatcher extends AbstractPatcher {
   }
 
   override public function apply( invocationType:InvocationType, swfContext:SwfContext ):void {
-
-    if ( invocationType.type != InvocationType.FRAME2 ) {
-      invokeCallBack();
-
-      return;
-    }
-
     for each (var swfTag:SwfTag in swfContext.swfTags)
     {
-      if ((swfTag.name == tagName) || (tagName == null))
+      if (((swfTag.name == tagName) || (tagName == null)) && (swfTag.type == 82))
       {
         var searchByteArray:ByteArray = new ByteArray();
-        searchByteArray.writeUTFBytes(originalString);
-        searchByteArray.position = 0;
+        AbcSpec.writeStringInfo(originalString, searchByteArray);
 
         var replacementByteArray:ByteArray = new ByteArray();
-        replacementByteArray.writeUTFBytes(replacementString);
-        replacementByteArray.position = 0;
+        AbcSpec.writeStringInfo(replacementString, replacementByteArray);
 
-        swfTag.tagBody = ByteArrayUtils.findAndReplace(swfTag.tagBody, searchByteArray, replacementByteArray);
+        swfTag.tagBody = ByteArrayUtils.findAndReplaceFirstOccurrence(swfTag.tagBody, searchByteArray, replacementByteArray);
 
         swfTag.recordHeader = new ByteArray();
         swfTag.recordHeader.endian = Endian.LITTLE_ENDIAN;

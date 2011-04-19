@@ -92,7 +92,7 @@ public class RevealPrivatesPatcher extends AbstractPatcher {
                 AbcSpec.writeU30(cp.getNamespacePosition(LNamespace.PUBLIC), repBA);
                 AbcSpec.writeU30(propOrMethNamePos, repBA);
 
-                swfTag.tagBody = ByteArrayUtils.findAndReplace(swfTag.tagBody, origBA, repBA);
+                swfTag.tagBody = ByteArrayUtils.findAndReplaceFirstOccurrence(swfTag.tagBody, origBA, repBA);
 
                 // update the recordHeader
                 swfTag.recordHeader = new ByteArray();
