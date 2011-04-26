@@ -12,25 +12,28 @@ import flash.utils.Endian;
 import org.as3commons.bytecode.abc.ConstantPool;
 import org.as3commons.bytecode.abc.IConstantPool;
 import org.as3commons.bytecode.abc.LNamespace;
+import org.as3commons.bytecode.abc.Multiname;
+import org.as3commons.bytecode.abc.MultinameG;
+import org.as3commons.bytecode.abc.QualifiedName;
 import org.as3commons.bytecode.abc.enum.NamespaceKind;
 import org.as3commons.bytecode.io.AbcDeserializer;
+import org.as3commons.bytecode.tags.DoABCTag;
 import org.as3commons.bytecode.util.AbcSpec;
 import org.mixingloom.SwfContext;
 import org.mixingloom.SwfTag;
 import org.mixingloom.invocation.InvocationType;
 import org.mixingloom.utils.ByteArrayUtils;
+import org.mixingloom.utils.HexDump;
+import org.mixingloom.utils.HexDump;
 
 public class RevealPrivatesPatcher extends AbstractPatcher {
 
     public var className:String;
 
-    public var tagName:String;
-
     public var propertyOrMethodName:String;
 
-    public function RevealPrivatesPatcher(tagName:String, className:String, propertyOrMethodName:String)
+    public function RevealPrivatesPatcher(className:String, propertyOrMethodName:String)
     {
-        this.tagName = tagName;
         this.className = className;
         this.propertyOrMethodName = propertyOrMethodName;
     }
@@ -39,7 +42,7 @@ public class RevealPrivatesPatcher extends AbstractPatcher {
 
         for each (var swfTag:SwfTag in swfContext.swfTags)
         {
-            if (((swfTag.name == tagName) || (tagName == null)) && (swfTag.type == 82))
+            if (swfTag.type == DoABCTag.TAG_ID)
             {
                 // skip the flags
                 swfTag.tagBody.position = 4;
@@ -60,48 +63,38 @@ public class RevealPrivatesPatcher extends AbstractPatcher {
                 var cp:IConstantPool = new ConstantPool();
 
                 abcDeserializer.deserializeConstantPool(cp);
-                
-                var ons:LNamespace = new LNamespace(NamespaceKind.PRIVATE_NAMESPACE, className);
-                var onsp:int = -1;
 
-                // using our own find here because the equals used in cp.getNamespacePosition doesn't like private namespaces
-                for (var i:uint = 0; i < cp.namespacePool.length; i++)
-                {
-                    if ((cp.namespacePool[i].kind == ons.kind) && (cp.namespacePool[i].name == ons.name))
-                    {
-                        onsp = i;
-                        break;
+                // search the multinamePool for the location of the property or method
+                for (var i:uint = 0; i < cp.multinamePool.length; i++) {
+
+                    if (cp.multinamePool[i] is QualifiedName) {
+                        var qn:QualifiedName = cp.multinamePool[i];
+                        if ((qn.nameSpace.kind == NamespaceKind.PRIVATE_NAMESPACE) &&
+                            ((qn.nameSpace.name == LNamespace.ASTERISK.name) ||
+                             (qn.nameSpace.name == className)) &&
+                            (qn.name == propertyOrMethodName)) {
+
+                            var nsppos:int = cp.getNamespacePosition(qn.nameSpace);
+                            var sppos:int = cp.getStringPosition(qn.name);
+
+                            // create a bytearray the should match the constant pool private qname for the property or method
+                            var origBA:ByteArray = new ByteArray();
+                            origBA.writeByte(0x07); // qname
+                            AbcSpec.writeU30(nsppos, origBA);
+                            AbcSpec.writeU30(sppos, origBA);
+
+                            // create a replacement bytearray that uses the public namespace for this qname
+                            var repBA:ByteArray = new ByteArray();
+                            repBA.writeByte(0x07); // qname
+                            AbcSpec.writeU30(cp.getNamespacePosition(LNamespace.PUBLIC), repBA);
+                            AbcSpec.writeU30(sppos, repBA);
+
+                            // replace the qname in the constant pool
+                            swfTag.tagBody = ByteArrayUtils.findAndReplaceFirstOccurrence(swfTag.tagBody, origBA, repBA);
+                        }
                     }
+
                 }
-
-                var propOrMethNamePos:int = cp.getStringPosition(propertyOrMethodName);
-
-                if ((onsp == -1) || (propOrMethNamePos == -1))
-                {
-                    // didn't find it
-                    continue;
-                }
-
-                var origBA:ByteArray = new ByteArray();
-                origBA.writeByte(0x07); // qname
-                AbcSpec.writeU30(onsp, origBA);
-                AbcSpec.writeU30(propOrMethNamePos, origBA);
-
-                var repBA:ByteArray = new ByteArray();
-                repBA.writeByte(0x07);
-                AbcSpec.writeU30(cp.getNamespacePosition(LNamespace.PUBLIC), repBA);
-                AbcSpec.writeU30(propOrMethNamePos, repBA);
-
-                swfTag.tagBody = ByteArrayUtils.findAndReplaceFirstOccurrence(swfTag.tagBody, origBA, repBA);
-
-                // update the recordHeader
-                swfTag.recordHeader = new ByteArray();
-                swfTag.recordHeader.endian = Endian.LITTLE_ENDIAN;
-                swfTag.recordHeader.writeByte(0xbf);
-                swfTag.recordHeader.writeByte(0x14);
-                swfTag.recordHeader.writeInt(swfTag.tagBody.length);
-                
-                swfTag.modified = true;
             }
         }
 
